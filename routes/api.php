@@ -16,10 +16,6 @@ use Symfony\Component\HttpFoundation\Response;
 |
 */
 
-// Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-//     return $request->user();
-// });
-
 Route::Post('/verification/events', function (Request $request) {
     /*
         The key from one of your Verification Apps, found here https://dashboard.sinch.com/verification/apps
@@ -32,15 +28,19 @@ Route::Post('/verification/events', function (Request $request) {
     $applicationSecret= "<REPLACE_WITH_VERIF_APP_SECRET>";
 
     $authHeader = explode(' ', $request->header('authorization'));
-    $callbackAuthHeaderValue = $authHeader[1];
+    Log::info($request->header('authorization'));
+    $callbackAuthHeader = explode(':', $authHeader[1]);
+    $callbackKey = $callbackAuthHeader[0];
+    $callbackSignature = $callbackAuthHeader[1];
 
-    $b64DecodedApplicationSecret = base64_decode($applicationSecret, true);
+    if ($callbackKey !== $applicationKey) {
+        Log::info("The keys do not match, the HTTP request did not originate from Sinch!");
+        return response()->json([], Response::HTTP_FORBIDDEN);
+    }
 
-    $callbackRequest = $request->all();
-
-    $encodedCallbackRequest = utf8_encode(json_encode($callbackRequest, JSON_UNESCAPED_UNICODE));
-    $md5CallbackRequest = md5($encodedCallbackRequest, true);
-    $encodedMd5ToBase64CallbackRequest = base64_encode($md5CallbackRequest);
+    $callbackRequest = $request->getContent();
+    $md5EncodedCallbackRequest = md5(mb_convert_encoding($callbackRequest, "UTF-8", "auto"), true);
+    $base64EncodedMd5CallbackRequest = base64_encode($md5EncodedCallbackRequest);
 
     $requestMethod = $request->method();
     $requestContentType = $request->header('content-type');
@@ -48,24 +48,35 @@ Route::Post('/verification/events', function (Request $request) {
     $requestUriPath = $request->getPathInfo();
 
     $stringToSign = $requestMethod . "\n"
-        . $encodedMd5ToBase64CallbackRequest . "\n"
+        . $base64EncodedMd5CallbackRequest . "\n"
         . $requestContentType . "\n"
         . $requestTimeStamp . "\n"
         . $requestUriPath;
 
-    $authorizationSignature = base64_encode(hash_hmac("sha256", $stringToSign, $b64DecodedApplicationSecret, true));
+    $b64DecodedApplicationSecret = base64_decode($applicationSecret, true);
 
-    if (strcmp("{$applicationKey}:{$authorizationSignature}", $callbackAuthHeaderValue)) {
-        $verificationResponse = [
-            "action" => "allow"
-        ];
-        Log::info("Verification is succesful, the hashes match.");
-    } else {
-        $verificationResponse = [
-            "action" => "deny"
-        ];
-        Log::info("Verification failed, the hashes do not match.");
-    };
+    $calculatedSignature = base64_encode(
+        hash_hmac(
+            "sha256",
+            mb_convert_encoding($stringToSign, "UTF-8", "auto"),
+            $b64DecodedApplicationSecret,
+            true
+        )
+    );
+
+    if ($callbackSignature !== $calculatedSignature) {
+        Log::info($callbackSignature . " is different from " . $calculatedSignature);
+        Log::info("The hashes do not match, the HTTP request did not originate from Sinch!");
+        return response()->json([], Response::HTTP_FORBIDDEN);
+    }
+
+    Log::info("Verification Callback validation was succesful, the hashes match!");
+
+    // Continue processing the data...
+
+    $verificationResponse = [
+        "action" => "allow" // or "deny"
+    ];
 
     return response()->json($verificationResponse, Response::HTTP_OK);
 });
