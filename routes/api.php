@@ -23,17 +23,17 @@ Route::Post('/verification/events', function (Request $request) {
     $applicationKey = "<REPLACE_WITH_VERIF_APP_KEY>";
 
     /*
-        The secret from the Voice App that uses the key above, found here https://dashboard.sinch.com/verification/apps
+        The secret from the Verification App that uses the key above, found here https://dashboard.sinch.com/verification/apps
     */
     $applicationSecret= "<REPLACE_WITH_VERIF_APP_SECRET>";
 
     $authHeader = explode(' ', $request->header('authorization'));
-    Log::info($request->header('authorization'));
     $callbackAuthHeader = explode(':', $authHeader[1]);
     $callbackKey = $callbackAuthHeader[0];
     $callbackSignature = $callbackAuthHeader[1];
 
     if ($callbackKey !== $applicationKey) {
+        Log::info($callbackKey . " is different from " . $applicationKey);
         Log::info("The keys do not match, the HTTP request did not originate from Sinch!");
         return response()->json([], Response::HTTP_FORBIDDEN);
     }
@@ -50,7 +50,7 @@ Route::Post('/verification/events', function (Request $request) {
     $stringToSign = $requestMethod . "\n"
         . $base64EncodedMd5CallbackRequest . "\n"
         . $requestContentType . "\n"
-        . $requestTimeStamp . "\n"
+        . "x-timestamp:" . $requestTimeStamp . "\n"
         . $requestUriPath;
 
     $b64DecodedApplicationSecret = base64_decode($applicationSecret, true);

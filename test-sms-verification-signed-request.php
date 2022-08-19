@@ -10,7 +10,7 @@ const URL = "https://verificationapi-v1.sinch.com/verification/v1/verifications"
 $applicationKey  = "<REPLACE_WITH_VERIF_APP_KEY>";
 
 /*
-    The secret from the Voice App that uses the key above, found here https://dashboard.sinch.com/verification/apps
+    The secret from the Verification App that uses the key above, found here https://dashboard.sinch.com/verification/apps
 */
 $applicationSecret = "<REPLACE_WITH_VERIF_APP_SECRET>";
 

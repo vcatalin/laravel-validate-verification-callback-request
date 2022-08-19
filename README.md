@@ -4,9 +4,9 @@ This project validates a Verification Event callback received from the Sinch pla
 
 ## Requirements
 
-- PHP 8.*
-- composer
-- ngrok
+- [PHP 8.*](https://www.php.net)
+- [composer](https://getcomposer.org/download/)
+- [ngrok](https://www.ngrok.com)
 
 ## Install
 
@@ -20,3 +20,7 @@ This project validates a Verification Event callback received from the Sinch pla
 - test using the SMS PIN Verification script found in the project
   - replace the required values in the `test-sms-verification-basic-auth.php` file or in the `test-sms-verification-signed-request.php` file
   - use either of the 2 scripts to start an SMS verification event, e.g. run the command `php -f test-sms-verification-basic-auth.php`
+
+### Notes for Windows Users
+
+- Make sure the `php.ini` file includes `extension=php_fileinfo.dll`, not having the extension will block `composer` to get all the required dependencies
